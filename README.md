@@ -203,3 +203,8 @@ Finally, using the groupedData data frame, the *mean* function, and the *summari
       sumData <- summarize_all(groupedData, mean)
 ```
 Each row of the sumData data frame represents observations of the mean values of each of the measurement variables for a Subject/Activity pair. All of the column labels remain the same as those of the dataSubset data frame, but unlike the dataSubset data frame, sumData is a 180 x 68 data frame (a result of there being 30 subjects and 6 activities, for a total of 180 Activity/Subject pairs, as well as 68 variables). The last line of code is a call of sumData to ensure that the script returns this tidy data frame.
+
+```
+      # Return this new data frame
+      sumData
+```
