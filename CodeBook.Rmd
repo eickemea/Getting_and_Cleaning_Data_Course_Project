@@ -1,0 +1,148 @@
+---
+title: "Codebook For Getting and Cleaning Data Course Project"
+author: "Andrew Eickemeyer"
+date: "2/24/2019"
+output:
+  html_document:
+        keep_md: yes
+---
+
+## Project Description
+The goal of this project is to take the data included in the [Human Activity Recognition Using Smartphones Data Set](https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip) and create an R script, run_analysis.R, which produces a tidy data set from the aforementioned messy data set. In particular, this script will merge the two sets of measurements into a single data frame, apply appropriate labels to the variables included in the data frame and the factor values of the Activity variable, extract only the measurements on the mean and standard deviation of each measurement, and produce an independent tidy data set with the average of each variable extracted this way for each activity/subject pair. More information on the behavior of of the script can be found in the **Data Cleaning** section of this document.
+
+## Reading the Output Back Into R
+The output of the run_analysis.R script was written into a text file, tidy_data.txt, and is included in the same [Github repository](https://github.com/eickemea/Getting_and_Cleaning_Data_Course_Project) as this codebook. This file can be read back into R using the *read.table* function to retrieve the original data frame output. When using *read.table* for this, it is important that the argument header = TRUE is included. If this isn't done, the names of the columns will not be included and instead will only have generic names of the form 'Vn', where n is an integer.
+
+## Data Acquisition
+The data for this project comes from the UCI Machine Learning Repository. A full description of the data can be found on the site [here](http://archive.ics.uci.edu/ml/datasets/Human+Activity+Recognition+Using+Smartphones#), and the data for the project can be downloaded as a zip file from this [link](https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip). 
+
+As mentioned on the site where the data was obtained, the data from the study was built from the recordings of 30 subject performing six different type of activities while carrying waist-mounted smartphones with embedded intertial sensors. The 30 subjects were between 19 and 48 years of age and were split into two groups: 70 percent of the subjects were randomly placed in the **training** group and the other 30 percent were placed in the **test** group. 
+
+According to the information included on the data set, the measurements were obtained using the phones' accelerometer and gyroscope, capturing _"3-axial linear acceleration and 3-axial angular velocity at a constant rate of 50Hz."_  Then, _"the sensor signals (accelerometer and gyroscope) were pre-processed by applying noise filters and then sampled in fixed-width sliding windows of 2.56 sec and 50% overlap (128 readings/window). The sensor acceleration signal, which has gravitational and body motion components, was separated using a Butterworth low-pass filter into body acceleration and gravity. The gravitational force is assumed to have only low frequency components, therefore a filter with 0.3 Hz cutoff frequency was used. From each window, a vector of features was obtained by calculating variables from the time and frequency domain."_
+
+For detailed information about the variables included in the tidy data set produced from this data, see the **Variable Descriptions** section of this document.
+
+## Tidy Dataset Creation
+To run the script to produce the tidy data set, the user must first download and unzip the file containing all of the data from the study ([link](https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip)). The resulting directory containg the data from the study should be named _UCI HAR Dataset_ and must be in the user's current working directory for the script to run. Do not alter any of the contents of _UCI HAR Dataset_ or the run_analysis.R script may produce an error. The following is a brief description of the behavior of the run_analysis.R script. For a more detailed description, see the [README.md file](https://github.com/eickemea/Getting_and_Cleaning_Data_Course_Project/blob/master/README.md) for the script.
+
+
+### Data Cleaning
+As the run_analysis.R script makes use of functions from the **dplyr** package for the cleaning, the script first checks to see if the user has this package installed, installs the package if not, and then loads the package into R:
+
+```
+      # Install dplyr package if it is not already installed
+      if(!require(dplyr)){
+            install.packages("dplyr")
+      }
+      
+      # Load dplyr package
+      library(dplyr)
+```
+
+The script then loads 8 text files containing relevant data from the _UCI HAR Dataset_ directory as data frames:
+
+```
+      # Read the eight relevant text files from the dataset into R
+      activity_labels <- read.table("UCI HAR Dataset/activity_labels.txt")
+      features <- read.table("UCI HAR Dataset/features.txt")
+      subject_test <- read.table("UCI HAR Dataset/test/subject_test.txt")
+      x_test <- read.table("UCI HAR Dataset/test/X_test.txt")
+      y_test <- read.table("UCI HAR Dataset/test/y_test.txt")
+      subject_train <- read.table("UCI HAR Dataset/train/subject_train.txt")
+      x_train <- read.table("UCI HAR Dataset/train/X_train.txt")
+      y_train <- read.table("UCI HAR Dataset/train/y_train.txt")
+```
+
+Using these data frames, the script produces a single tidy data frame, containing all of the variables for which measurements were recorded in the study and all observations of these variables:
+
+```
+      # Create a data frame that replaces the activity id's in y_test with the 
+      # corresponding proper labels
+      activities_test <- data.frame(Activity = activity_labels$V2[y_test$V1])
+      
+      #Rename the variable in subject_test to be descriptive
+      names(subject_test) <- "Subject"
+      
+      # Create a data frame that replaces the activity id's in y_test with the 
+      # corresponding proper labels
+      activities_train <- data.frame(Activity = activity_labels$V2[y_train$V1])
+      
+      # Rename the variable in subject_train to be descriptive
+      names(subject_train) <- "Subject"
+      
+      # Create data frames containing the recorded data for the subjects in the 
+      # test and train groups
+      test <- cbind(subject_test, activities_test, x_test)
+      train <- cbind(subject_train, activities_train, x_train)
+      
+      # Combine test and train data frames to create a data frame with the recorded 
+      # data for all subjects. Then arrange the data frames based on the subject being
+      # observed in ascending order
+      data <- rbind(test, train)
+      data <- data %>% arrange(Subject)
+```
+
+From this single tidy data frame, the script extracts a data frame containg only the variables which measure the mean and standard deviation of each measurement:
+
+```
+      # Get the indices for the rows of features corresponding to measurements on the
+      # mean and standard deviation of each of the features
+      indices <- grep("mean\\(\\)|std\\(\\)", features$V2)
+      
+      # Extract a data frame consisting of subject id's, activities, and measurements
+      # on the mean and standard deviation of each of the features
+      dataSubset <- data[,c(1, 2, indices + 2)]
+```
+
+After this, the script cleans the variable names from the original data set so as not to include any dashes or partentheses.The script then produces a new data frame that groups the observations by SubjectID and Activity:
+
+```
+      # Create a new data frame that groups dataSubset by SubjectID and Activity variables
+      groupedData <- group_by(dataSubset, SubjectID, Activity)
+```
+
+and from this grouped data, produces a final tidy data set which contains the average of each variable for each Subject/Activity pair:
+
+```
+      # Create a new, tidy data frame that contains the mean values of the measurement 
+      # variables in groupedData for each Subject/Activity pair
+      sumData <- summarize_all(groupedData, mean)
+```
+
+This is the data set returned by the script.
+
+## Variable Descriptions
+
+### General Information
+The tidy dataset, tidy_data.txt, is a 180 x 68 table containing the mean of the observations for each of the numeric variables described below taken over each Subject/Activity pair. For convenience, the descriptions provided for each of the variables is the definition of the variables prior to being summarized in this manner to produce the tidy_data.txt data set. To emphasize, notation is abused slightly, as the numeric variables in tidy_data.txt are actually the means of the numeric variables described below.For convenience, the descriptions provided for each of the variables is the definition of the variables prior to being summarized in this manner to produce the tidy_data.txt data set. To emphasize, notation is abused slightly, as the numeric variables in tidy_data.txt are actually the means of the numeric variables described below. The first two columns represent the Subject and Activity variables, and each other column represents the measurements of the mean of a numeric variable described below for a Subject/Activity pair. A row represents observations of these variables for a single Subject/Activity pair.
+
+It is also important to note that all of the numeric variable observations in the original data set from which the tidy_data.txt set is derived were normalized to be bounded between -1 and 1. Unfortunately, the documentation for the original data set did not include the method for normalization, so we cannot provide the true units for the variables described below. Instead we provide the units for each variable prior to normalization. We also note that the unit 'g' in the table below refers to the standard gravity unit (approximately 9.80665 m/s^2).
+
+One final note is that some of the variables below were obtain via a Fast Fourier Transform of other variables. However, the documentation for the original data set did not specify whether the transform was discrete or continuous, so for the purposes of identifying units for these variables, we have assumed that the transform was discrete.
+
+### Variables
+
+**Note: The table below may not fit in display on Github. If that is the case, the reader can scroll sideways on the Github display to see the rest of the table**
+
+```{r echo = FALSE}
+suppressWarnings(library(openxlsx))
+suppressWarnings(library(xtable))
+data <- read.xlsx("Var_Info.xlsx")
+knitr::kable(data, format = "markdown")
+```
+
+## Reference Material Used
+- **Original Data Source**: _UCI Machine Learning Repository_; http://archive.ics.uci.edu/ml/datasets/Human+Activity+Recognition+Using+Smartphones
+- **Information on Fast Fourier Transform and Units**: https://physics.stackexchange.com/questions/15073/how-does-the-fourier-transform-invert-units
+- **Model Template for Codebook**: https://gist.github.com/JorisSchut/dbc1fc0402f28cad9b41
+- **Guide to Assignment 1**: David Hood; _Getting and Cleaning the Assignment_; https://thoughtfulbloke.wordpress.com/2015/09/09/getting-and-cleaning-the-assignment/
+- **Guide to Assignment 2**: Coursera Username: Luis A. Sandino; https://drive.google.com/file/d/0B1r70tGT37UxYzhNQWdXS19CN1U/view
+
+## Annex
+**Code to Generate Variable Descriptions Table:**
+```{r results = 'hide'}
+suppressWarnings(library(openxlsx))
+suppressWarnings(library(xtable))
+data <- read.xlsx("Var_Info.xlsx")
+knitr::kable(data, format = "markdown")
+```
